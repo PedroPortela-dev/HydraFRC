@@ -5,8 +5,8 @@ import edu.wpi.first.wpilibj.SpeedController;
 import edu.wpi.first.wpilibj.SpeedControllerGroup;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
-import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.AnalogGyro;
+import edu.wpi.first.wpilibj.Joystick;
 
 public class Robot extends TimedRobot {
   SpeedController m_frontLeft = new PWMVictorSPX(0);
@@ -18,32 +18,58 @@ public class Robot extends TimedRobot {
   SpeedControllerGroup m_right = new SpeedControllerGroup(m_frontRight, m_rearRight);
 
   DifferentialDrive m_drive = new DifferentialDrive(m_left, m_right);
-  XboxController m_xbox = new XboxController(0);
+  Joystick m_stick= new Joystick(0);
   AnalogGyro m_gyro = new AnalogGyro(0);
 
-  boolean verificacao;
-  double AnguloCarro,AnguloJoystick;
+  boolean verificacao,modelocomotion;
+  double x,y,AnguloCarro,AnguloJoystick;
 
   @Override
   public void teleopPeriodic()
-  {   
-    AnguloJoystick = getDirectionRadiansJoystick(m_xbox.getX(), m_xbox.getY());
-    AnguloCarro = getDirectionRadiansRobot(m_xbox.getX(), m_xbox.getY());
-    DriveTradicional(m_xbox.getX(), m_xbox.getY());
-  }
-
-  public void DriveMira()
   {
-    m_drive.arcadeDrive(getPowertDirection(), getControllerLinear());
+    if(getMagnitude(m_stick.getRawAxis(0), m_stick.getRawAxis(1))!=0 && !modelocomotion)
+    {
+      x=m_stick.getRawAxis(0);
+      y=-m_stick.getRawAxis(1);
+
+      modelocomotion=true;
+    }else
+    {
+      x=m_stick.getRawAxis(0);
+      y=-m_stick.getRawAxis(1);
+
+      modelocomotion=false;
+    }
+
+    AnguloJoystick = getDirectionRadiansJoystick(x, y);
+    AnguloCarro = getDirectionRadiansRobot(x, y);
+
+    if(modelocomotion)
+    {
+      driveCarro(x, y);
+    }else
+    {
+      driveTradicional(x, y);
+    }
   }
 
-  public void DriveCarro(double x, double y)
+  public void drivePowerController(double x, double y)
+  {
+    m_drive.arcadeDrive(m_stick.getRawAxis(2), cosMagnitude(x, y));
+  }
+
+  public void driveMira()
+  {
+    m_drive.arcadeDrive(getControllerDirection(), getControllerPower());
+  }
+
+  public void driveCarro(double x, double y)
   {
 
-    DriveTradicional(Math.cos(getDirectionRadiansVetor())*getMagnitude(x, y), Math.sin(getDirectionRadiansVetor())*getMagnitude(x, y));
+    driveTradicional(Math.cos(getDirectionRadiansVetor())*getMagnitude(x, y), Math.sin(getDirectionRadiansVetor())*getMagnitude(x, y));
   }
 
-  public void DriveTradicional(double x, double y)
+  public void driveTradicional(double x, double y)
   {
     if(y>0){
       m_drive.arcadeDrive(getMagnitude(x, y), cosMagnitude(x, y));
@@ -97,7 +123,8 @@ public class Robot extends TimedRobot {
     }
   }
 
-  public double getDirectionRadiansRobot(double x, double y){
+  public double getDirectionRadiansRobot(double x, double y)
+  {
     if(getMagnitude(x, y)==0)
     {
       verificacao=false;
@@ -125,7 +152,7 @@ public class Robot extends TimedRobot {
     }
   }
 
-  public double getPowertDirection()
+  public double getControllerDirection()
   {
     if(AnguloCarro<Math.PI)
     {
@@ -142,7 +169,7 @@ public class Robot extends TimedRobot {
     return -1;
   }
   
-  public double getControllerLinear()
+  public double getControllerPower()
   {
     if(AnguloJoystick<Math.PI)
     {
